@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* The Corporate — brand custom properties (always included) */
+:root {
+  --tc-ink: #000000;
+  --tc-stone: #b6b09f;
+  --tc-linen: #eae4d5;
+  --tc-chalk: #f2f2f2;
+  --tc-white: #ffffff;
+  --tc-lime: #c8f135;
+  --tc-border: rgba(182, 176, 159, 0.35); /* Stone @ 35% */
+  --tc-border-strong: #b6b09f;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: var(--tc-chalk);
+    color: var(--tc-ink);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-weight: 300;
+    font-size: 15px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4 { margin: 0; }
+  /* Links: underline + Ink, never blue (brand) */
+  a { color: var(--tc-ink); text-decoration: underline; text-underline-offset: 2px; }
+  /* Form controls inherit the body font */
+  input, select, textarea, button { font-family: inherit; }
+}
+
+@layer components {
+  /* Typography roles (Section 4) */
+  .tc-h1 { @apply font-display text-[48px] font-bold leading-[1.05] tracking-[-0.01em] text-ink; }
+  .tc-h2 { @apply font-display text-[32px] font-normal leading-[1.15] text-ink; }
+  .tc-h3 { @apply font-sans text-[18px] font-medium leading-[1.3] tracking-h3 uppercase text-ink; }
+  .tc-subhead { @apply font-sans text-[13px] font-medium leading-[1.4] tracking-subhead uppercase text-stone; }
+  .tc-label { @apply font-sans text-[11px] font-normal leading-[1.5] tracking-label uppercase text-stone; }
+  .tc-body { @apply font-sans text-[15px] font-light leading-[1.75] text-ink; }
+
+  /* Table (Section 6) */
+  .tc-table { @apply w-full border-collapse font-sans text-[14px]; }
+  .tc-table th {
+    @apply text-[10px] font-medium tracking-[0.14em] uppercase text-stone px-3 py-2.5 text-left align-bottom;
+    border-bottom: 0.5px solid var(--tc-stone);
+  }
+  .tc-table td {
+    @apply px-3 py-2.5 text-ink font-light align-top;
+    border-bottom: 0.5px solid var(--tc-border);
+  }
+  .tc-table tbody tr:nth-child(even) td { background: var(--tc-chalk); }
+}
