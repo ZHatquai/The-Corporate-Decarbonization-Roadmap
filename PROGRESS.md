@@ -54,5 +54,7 @@ Session 1: ran First Session Setup (created docs/, moved the four reference docs
 [Rule: bugs, edge cases, and deferred fixes. One line each. Remove when resolved.]
 
 ## Notes for next session
-None.
+- Supabase access: the `mcp__Supabase__*` tool calls were blocked by an approval gate in session 1, so the database layer could not start. The builder is opening a fresh session to allow those tools. In the new session, set `mcp__Supabase__*` to "Always allow" before starting Phase 1.
+- Resume point: **Phase 1 — Database layer**, following `docs/build-plan.md` (the full approved plan). Phase 0 (First Session Setup) is done and committed. Run Phase 1 end-to-end, then STOP at the checkpoint (1j) for builder go-ahead before any frontend work.
+- Branch/deploy reminder: commit/push to `claude/sleepy-lamport-hswsyc` and open a PR to `main` (do not push directly to main).
 [Rule: the builder writes here between sessions. Claude Code reads these aloud at session start, acts on them, then clears this section.]
