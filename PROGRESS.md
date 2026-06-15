@@ -2,59 +2,59 @@
 
 > Claude Code: read this file at the start of every session, before touching anything. Update it at every save point. Replace content — do not append. History lives in git.
 
-**Session:** 1 — First Session Setup complete; database layer next
-**Last updated:** 15 June 2026 — session 1
+**Session:** 2 — Database layer applied + verified; **at the Phase 1 checkpoint** (frontend next, on go-ahead)
+**Last updated:** 15 June 2026 — session 2
 **Live URL:** none yet [Rule: fill in after the first successful deploy]
 
 ## Current state
-First Session Setup done. Repo layout reorganized: the four reference docs now live in `docs/` (product-spec.md, supabase-setup.md, waterfall-chart-spec.md, yoy-trajectory-chart-spec.md); the the-corporate-brand skill is installed at `.claude/skills/the-corporate-brand/SKILL.md`; `.gitignore` added. CLAUDE.md and PROGRESS.md remain in the root. No app code or database changes yet — the build runs DB-first, then a checkpoint before the frontend.
-[Rule: this section describes what exists and works right now — never what is planned. Completed checklist items get absorbed here in compressed form.]
+**Phase 1 (live database layer) is complete, applied to "The Corporate Space", and verified.** Migrations 0015–0019:
+- `ec_user_roles` → `user_roles` (atomic), role check expanded with `sourcing_manager`, all six dependent objects recreated to reference the new name, `invite-user` Edge Function redeployed (v2, verify_jwt=true). Emissions Platform verification matrix re-run and **passes** (anon/no-role see nothing; esg_admin all; plant_manager own-plant only; sourcing_manager sees zero `ec_` data).
+- Three `dr_` tables created with explicit RLS (reusing `ec_private` helpers + sourcing_manager handling): `dr_projects` (sequence + `DC-###` code trigger + updated_at trigger), `dr_annual_inventory` (esg_admin only), `dr_comments` (immutable, read-scoped, insert via function only).
+- Five workflow functions (advance/approve/return/resubmit/publish) + two read-only aggregation functions (preview, per-plant totals), all SECURITY DEFINER + self-authorizing, EXECUTE hardened to authenticated.
+- `dr_annual_inventory` seeded 2023 (base_year, 690,000) / 2024 (683,000) / 2025 (673,000) — real live S1/S2 + plug S3.
+- Full functional + RLS + negative-test pass in rolled-back transactions; `get_advisors(security)` clean (only the by-design SECURITY-DEFINER-RPC warnings remain). `docs/supabase-setup.md` updated as the schema source of truth.
+- No app code yet. The Scope 1/2 open question is resolved (see Build decisions).
+[Rule: this section describes what exists and works right now — never what is planned.]
 
 ## Last session
-Session 1: ran First Session Setup (created docs/, moved the four reference docs via git mv, installed the brand skill as SKILL.md, added .gitignore). Confirmed the build approach with the builder and wrote the approved build plan. Next: Phase 1 — the live database layer, ending at a checkpoint.
-[Rule: 3–5 lines maximum. Replace each session — what was built, changed, or fixed.]
+Session 2: ran Phase 1 end-to-end via Supabase MCP — introspected the live schema, applied migrations 0015–0019, redeployed the Edge Function, and verified the whole DB layer (platform isolation matrix, full state machine, dr_ RLS scoping, all negative guards, aggregations, advisors). Updated docs/supabase-setup.md. Stopped at the Phase 1 checkpoint.
+[Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] Connect to Supabase project "The Corporate Space", read docs/supabase-setup.md, and review the live schema via MCP before any database work
-- [ ] FIRST migration (atomic, before any dr_ table): rename ec_user_roles → user_roles, recreate the dependent helpers/trigger/backfill, expand the role constraint to add 'sourcing_manager', redeploy invite-user, then re-run the Emissions Platform verification matrix — do not proceed until it passes
-- [ ] Create dr_projects, dr_annual_inventory, dr_comments with explicit RLS policies (reuse the ec_private helpers; add sourcing_manager handling)
-- [ ] Build the five SECURITY DEFINER workflow functions (advance, approve, return, resubmit, publish) and grant/revoke EXECUTE per migration 0013
-- [ ] Seed dr_annual_inventory for 2023 (base year), 2024, and 2025
-- [ ] Update docs/supabase-setup.md: the rename, the new role value, the three dr_ tables, their RLS, and the functions
-- [ ] Build Login — magic-link sign-in, then route by role
-- [ ] Build Access-not-provisioned — signed-in account with no user_roles row
-- [ ] Build ESG lead — Roadmap — the waterfall and YoY trajectory, per the two chart specs
-- [ ] Build ESG lead — Emissions & projects — per-plant Scope 1/2 (live), the full project list with financials, and the MAC curve
-- [ ] Build ESG lead — Annual inventory — publish-and-freeze panel fed by the platform's approved Scope 1/2 plus entered Scope 3
-- [ ] Build ESG lead — Approval queue — advance, approve, and return-with-comment via the workflow functions
-- [ ] Build ESG lead — Settings → Users — invite into user_roles via the existing invite-user function
-- [ ] Build Plant manager — Submission form — own plant fixed, creates a project in 'evaluation'
-- [ ] Build Plant manager — Status list — own-plant projects, return comments, revise-and-resubmit
-- [ ] Build Sourcing manager — Submission form + Status list — global projects (plant_id NULL)
-- [ ] Local test pass — full walkthrough of every view and role routing before deploying
-- [ ] Acceptance criteria pass — verify every criterion in spec Section 13 (15 criteria) before deploy
-- [ ] Deploy to Netlify — builder adds VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Netlify dashboard
+- [ ] **CHECKPOINT:** builder go-ahead to start the frontend (Phase 2 of docs/build-plan.md).
+- [ ] FE-0 Scaffold (Vite + React + Tailwind, react-router-dom v6, @supabase/supabase-js) + brand primitives + `lib/supabaseClient.js`; brand tokens into index.css/tailwind.config.js; `.env.example` (no values).
+- [ ] FE-1 Auth + role gate + routing: `useSession`, `useRole` (own-row select on `user_roles`), Login (magic link), AccessNotProvisioned, role redirects. *(AC 3)*
+- [ ] FE-2 Shared pure engine: config, `trajectoryEngine.js` (waterfall decomposition + per-year sweep), `macCurve.js`, `format.js`; validate vs spec example (carbon_debt ≈ 813,300; net ≈ 0; removals ≈ 9.0%).
+- [ ] FE-3 Manager surface: ProjectForm (plant-fixed vs global), SubmissionForm, StatusList, CommentTrail, resubmit. *(AC 4, 5, partial 7)*
+- [ ] FE-4 Admin approval: AppShell + AdminNav, ApprovalQueue, ProjectDetail, advance/approve/return RPCs (comment required). *(AC 7)*
+- [ ] FE-5 Annual inventory: PublishPanel (live S1/S2 via `dr_preview_inventory`, S3 entry, total, publish/re-publish). *(AC 8)*
+- [ ] FE-6 Roadmap charts (custom SVG): WaterfallChart, TrajectoryChart, SbtiBadge, fed by `useRoadmapData`. *(AC 9, 10, 11)*
+- [ ] FE-7 Emissions & projects + MAC curve: per-plant S1/2 via `dr_plant_scope_totals` (year selector, default latest reported), full project list, MacCurveChart. *(AC 12)*
+- [ ] FE-8 Settings → Users: list + invite (insert `user_roles` row → invoke `invite-user` → `ec_link_pending_users()`). *(AC 13)*
+- [ ] FE-9 Local test pass + responsive polish (700px + mobile, lime budget, hairlines, square corners), then deploy.
+- [ ] Acceptance criteria pass — spec Section 13 (15 criteria) before deploy.
+- [ ] Deploy to Netlify — builder adds VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Netlify dashboard.
 [Rule: completed items leave this list and are absorbed into Current state. This list only shrinks.]
 
 ## Build decisions
-- Branch & deploy: develop on `claude/sleepy-lamport-hswsyc`, commit/push there each save point, and open a PR to `main` (merge → Netlify deploy). Deliberate deviation from CLAUDE.md's "push to main", agreed with the builder.
-- Charts: custom inline SVG (no charting library), fed by one shared engine — chosen for the bespoke two-tone bars, step connectors, and shaded decision-gap band.
-- Frontend stack picks: Vite + React (JS), `react-router-dom` v6 for role routing, `@supabase/supabase-js`.
-- Role resolution in the browser uses an own-row `select` on `user_roles` (the `ec_private.*` helpers are a private schema, not REST-exposed).
-- Execution sequencing: DB layer first, then a checkpoint for builder go-ahead before the frontend.
-[Rule: one line per decision made during the build that is not in the spec — prompt structures, field formats, naming choices, library picks. Future sessions depend on these to stay consistent.]
+- Branch & deploy: this session develops on `claude/loving-dirac-eotpfy` (session 1's `claude/sleepy-lamport-hswsyc` is merged to main via PR #1). Commit/push to the feature branch; **no PR opened automatically** — open one on the builder's request. Deviation from CLAUDE.md's "push to main", agreed with the builder.
+- Scope 1/2 derivation (open question RESOLVED): the `EF-S1-`/`EF-S2-` prefix on `ec_submission_lines.snap_ef_id` matches `ec_emission_factors.scope` exactly (30 S1 / 18 S2 live). Aggregations use the prefix on the snapshot — no join, no drop risk — and live only in server-side functions.
+- `project_code`: `DC-` + 3-digit zero-padded sequence (`dr_project_code_seq`), starts at 1 → first real project is `DC-001`; widens past 999 naturally.
+- Inventory seed split: Scope 1/2 from the live approved aggregation; Scope 3 is the plug so the total equals the chart-spec actuals (690k/683k/673k). 2023 = base_year, 2024/2025 = reported.
+- `submitted_by` (dr_projects) and `author` (dr_comments) are nullable with default `auth.uid()` and FK `ON DELETE SET NULL`, mirroring the platform's `created_by` so deleting an auth user never blocks.
+- `dr_annual_inventory` has esg_admin read/insert/update policies per spec, but in practice writes go through `dr_publish_inventory` (definer); the publish function returns the upserted row for the UI.
+- Charts: custom inline SVG (no charting library), one shared engine — carried from session 1.
+- Frontend stack: Vite + React (JS), react-router-dom v6, @supabase/supabase-js; role via own-row select on `user_roles` (the `ec_private.*` helpers are private, not REST-exposed).
+[Rule: one line per decision not in the spec. Future sessions depend on these.]
 
 ## Known issues
-- Confirm Scope 1 vs 2 is derivable from each ec_submission_lines line's emission factor (EF-S1-/EF-S2- prefix) against the live schema before building the inventory aggregation (spec Open Question, Claude Code to resolve).
-- MAC curve scope defaults to approved + pending; the ESG lead may later want evaluation candidates included too (spec Open Question).
-- Trajectory parameters (growth, target, SBTi cap, threshold) are fixed config this build; confirm they should stay non-editable (spec Open Question).
-- Per-plant emissions view defaults to the latest reported year with a year selector; confirm this granularity (spec Open Question).
-- Supabase Free plan pauses after ~1 week idle; wake the project in the dashboard if REST calls fail after a quiet period (from supabase-setup.md).
-- The Emissions Platform demo dataset (migration 0012) is still live, so per-plant figures and the inventory preview reflect demo data until it is removed when real data flows (from supabase-setup.md).
-[Rule: bugs, edge cases, and deferred fixes. One line each. Remove when resolved.]
+- MAC curve scope defaults to approved + pending; the ESG lead may later want evaluation candidates included too (spec Open Question — confirm during FE-7).
+- Trajectory parameters (growth 0.0075, target 2045, SBTi cap 0.10, threshold 1000) are fixed config this build; confirm they stay non-editable (spec Open Question).
+- Per-plant emissions view: default to latest reported year with a year selector; confirm granularity during FE-7 (spec Open Question).
+- Live data: real 2023–2025 emissions are loaded (migration `load_real_2023_2025_data`), so per-plant figures and the inventory preview reflect real data for those years. The Emissions Platform demo dataset (0012) is still present for 2026 — harmless to this tool (it aggregates by `year`), remove upstream when desired.
+- Supabase Free plan pauses after ~1 week idle; wake the project in the dashboard if REST calls 5xx after a quiet period.
+[Rule: bugs, edge cases, deferred fixes. One line each. Remove when resolved.]
 
 ## Notes for next session
-- Supabase access: the `mcp__Supabase__*` tool calls were blocked by an approval gate in session 1, so the database layer could not start. The builder is opening a fresh session to allow those tools. In the new session, set `mcp__Supabase__*` to "Always allow" before starting Phase 1.
-- Resume point: **Phase 1 — Database layer**, following `docs/build-plan.md` (the full approved plan). Phase 0 (First Session Setup) is done and committed. Run Phase 1 end-to-end, then STOP at the checkpoint (1j) for builder go-ahead before any frontend work.
-- Branch/deploy reminder: commit/push to `claude/sleepy-lamport-hswsyc` and open a PR to `main` (do not push directly to main).
+- (none — cleared at session 2 start; the session-1 notes about enabling Supabase MCP and resuming at Phase 1 were acted on.)
 [Rule: the builder writes here between sessions. Claude Code reads these aloud at session start, acts on them, then clears this section.]

@@ -329,3 +329,188 @@ no non-approved line snapped).
 
 ---
 _Last updated: 14 June 2026 — session 2 (Emissions Platform DB **applied + verified**: 8 tc_/ec_ tables, RLS helpers, auth-link trigger, state-machine RPCs, seed + demo data; migration 0013 hardened function grants; migration 0014 fixed the manager line-read policy). Portal schema above unchanged._
+
+---
+
+# Supabase Setup — The Corporate Decarbonization Roadmap (added by this build)
+
+> Strictly additive on top of the Supplier Portal and Emissions Platform, **plus
+> one sanctioned change to a shared object**: `ec_user_roles` was renamed to
+> `user_roles` (it is now shared by the Emissions Platform and this tool). Helper
+> names and the `ec_private` schema are unchanged. Nothing else existing was
+> modified. Migrations `0015`–`0019`.
+>
+> **Status: APPLIED + VERIFIED to the live project (session 2, 15 June 2026).**
+
+## Shared-table rename: `ec_user_roles` → `user_roles` (migration 0015, atomic)
+
+One atomic migration, applied before any `dr_` table:
+
+1. `ALTER TABLE ec_user_roles RENAME TO user_roles;` (PK `email`, nullable `user_id`,
+   `role`, `plant_id` — structure unchanged; the FK to `auth.users` follows the rename).
+2. Role check constraint expanded: dropped `ec_user_roles_role_check`, added
+   `user_roles_role_check CHECK (role IN ('plant_manager','esg_admin','sourcing_manager'))`.
+   `sourcing_manager` is new this build.
+3. `CREATE OR REPLACE` of all six dependent objects to reference `public.user_roles`
+   (names/schema unchanged): the four `ec_private` helpers (`auth_ec_role`,
+   `auth_ec_plant_id`, `auth_ec_is_admin`, `auth_ec_manages_plant`), the auth-link
+   trigger function `handle_new_ec_user`, and the backfill `ec_link_pending_users`.
+   The plpgsql functions (`handle_new_ec_user`, `ec_link_pending_users`) reference the
+   table by name at runtime and **had** to be recreated; the SQL helpers were recreated
+   for source-text correctness.
+4. The `invite-user` Edge Function was redeployed (version 2, `verify_jwt = true`) with
+   its single `.from('ec_user_roles')` changed to `.from('user_roles')`.
+
+**Verification (rolled-back role simulations, session 2):** after the rename the
+Emissions Platform is unaffected — `anon` and a no-role authenticated user see 0 rows on
+every `tc_`/`ec_` table; `esg_admin` sees all (5 plants, 48 factors, 61 submissions, 420
+lines, 4 role rows); `plant_manager` (TC-FAC-001) sees only its own plant (1 plant, 12 own
+submissions, 84 own lines, 0 other-plant); a `sourcing_manager` sees **0** rows on every
+`tc_`/`ec_` table (emissions isolation confirmed — the platform helpers naturally return
+false for the new role). Satisfies acceptance criteria 1, 2, and the `sourcing_manager`
+half of 6.
+
+## New `dr_` tables (RLS auto-enabled by `ensure_rls`; explicit policies shipped)
+
+### `dr_projects` (migration 0016)
+One row per decarbonization project, plant or global.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | `gen_random_uuid()` |
+| project_code | text NOT NULL UNIQUE | assigned by trigger `dr_assign_project_code`: `DC-` + 3-digit zero-padded `dr_project_code_seq` (e.g. `DC-001`); widens past 999 naturally |
+| plant_id | text NULL → `tc_plants(plant_id)` | **NULL = corporate/global** |
+| area | text NOT NULL | CHECK in (Energy efficiency, Electrification, Renewables, Materials, Logistics, Suppliers, Removals, Grid) |
+| scope | text NOT NULL | CHECK in ('1','2','1 & 2','3') |
+| name | text NOT NULL | |
+| description | text NOT NULL | |
+| abatement_tco2e | numeric NOT NULL | annual abatement, tCO2e/yr |
+| start_year | integer NOT NULL | |
+| is_removal | boolean NOT NULL | default false |
+| capex_usd | numeric NOT NULL | |
+| opex_annual_usd | numeric NOT NULL | |
+| mac_usd_per_tco2e | numeric NOT NULL | entered, may be negative (cost-saving) |
+| status | text NOT NULL | default `'evaluation'`; CHECK in (evaluation, pending, approved, restudy). **Set only by the workflow functions** |
+| submitted_by | uuid NULL → `auth.users(id)` ON DELETE SET NULL | default `auth.uid()` (nullable to mirror the platform's `created_by` and allow auth-user deletion) |
+| created_at | timestamptz NOT NULL | default `now()` |
+| updated_at | timestamptz NOT NULL | default `now()`; maintained by `dr_set_updated_at` BEFORE UPDATE trigger |
+
+Indexes: `dr_projects_plant_id_idx (plant_id)`, `dr_projects_status_idx (status)`, unique on `project_code`.
+
+### `dr_annual_inventory` (migration 0016)
+One frozen row per reporting year. `esg_admin`-only.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| year | integer PK | |
+| scope1_tco2e | numeric NOT NULL | location-based |
+| scope2_tco2e | numeric NOT NULL | location-based (only basis today) |
+| scope3_tco2e | numeric NOT NULL | entered by ESG lead |
+| total_tco2e | numeric NOT NULL | `= scope1 + scope2 + scope3`, computed on publish |
+| status | text NOT NULL | CHECK in (base_year, reported); 2023 = base_year, else reported |
+| published_at | timestamptz NOT NULL | default `now()` |
+| updated_at | timestamptz NOT NULL | default `now()`; `dr_set_updated_at` trigger |
+
+### `dr_comments` (migration 0016)
+Immutable return-comment trail. Inserts only via `dr_return_project`; no update/delete policies.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | `gen_random_uuid()` |
+| project_id | uuid NOT NULL → `dr_projects(id)` ON DELETE CASCADE | indexed (`dr_comments_project_id_idx`) |
+| author | uuid NULL → `auth.users(id)` ON DELETE SET NULL | default `auth.uid()` (the ESG lead) |
+| comment | text NOT NULL | |
+| from_status | text NOT NULL | CHECK in (evaluation, pending) — the status returned from |
+| created_at | timestamptz NOT NULL | default `now()` |
+
+## RLS policies (all `TO authenticated`; reuse `ec_private` helpers + `sourcing_manager` handling)
+
+| Table | Policy | Cmd | Clause |
+|-------|--------|-----|--------|
+| dr_projects | dr_projects_pm_read | SELECT | `auth_ec_manages_plant(plant_id)` |
+| dr_projects | dr_projects_sm_read | SELECT | `auth_ec_role()='sourcing_manager' AND plant_id IS NULL` |
+| dr_projects | dr_projects_admin_read | SELECT | `auth_ec_is_admin()` |
+| dr_projects | dr_projects_pm_insert | INSERT | check: `auth_ec_manages_plant(plant_id) AND status='evaluation' AND submitted_by=auth.uid()` |
+| dr_projects | dr_projects_sm_insert | INSERT | check: `auth_ec_role()='sourcing_manager' AND plant_id IS NULL AND status='evaluation' AND submitted_by=auth.uid()` |
+| dr_projects | dr_projects_pm_update | UPDATE | using+check: `auth_ec_manages_plant(plant_id) AND status='restudy'` (can revise fields but cannot change status) |
+| dr_projects | dr_projects_sm_update | UPDATE | using+check: `auth_ec_role()='sourcing_manager' AND plant_id IS NULL AND status='restudy'` |
+| dr_annual_inventory | dr_inv_admin_read / _insert / _update | SELECT/INSERT/UPDATE | `auth_ec_is_admin()` |
+| dr_comments | dr_comments_pm_read | SELECT | EXISTS project p where `p.id=project_id AND auth_ec_manages_plant(p.plant_id)` |
+| dr_comments | dr_comments_sm_read | SELECT | EXISTS project p where `p.id=project_id AND p.plant_id IS NULL AND auth_ec_role()='sourcing_manager'` |
+| dr_comments | dr_comments_admin_read | SELECT | `auth_ec_is_admin()` |
+
+`esg_admin` has **no** direct insert/update on `dr_projects` (all transitions via functions);
+`dr_comments` has **no** insert/update/delete policy (the return function, owner-privileged,
+writes the single row); `anon`/no-role have no policy on any `dr_` table → default-deny.
+
+## Functions (migration 0017; SECURITY DEFINER, self-authorizing, `search_path` pinned)
+
+Workflow (status is set **only** here):
+- `dr_advance_project(uuid)` — esg_admin; evaluation → pending.
+- `dr_approve_project(uuid)` — esg_admin; pending → approved.
+- `dr_return_project(uuid, text)` — esg_admin; evaluation|pending → restudy; raises if comment empty/blank; writes one `dr_comments` row with `from_status`.
+- `dr_resubmit_project(uuid)` — owner (plant_manager of the plant, or sourcing_manager for a global project); restudy → evaluation.
+- `dr_publish_inventory(integer, numeric)` — esg_admin; aggregates approved location-based S1/S2 for the year (via the `EF-S1-`/`EF-S2-` prefix on `ec_submission_lines.snap_ef_id`), adds the entered Scope 3, computes the total, upserts the frozen row (`base_year` for 2023 else `reported`; re-publish overwrites). Returns the row.
+
+Read-only aggregation (esg_admin):
+- `dr_preview_inventory(integer)` → `(scope1_tco2e, scope2_tco2e)` for the publish preview.
+- `dr_plant_scope_totals(integer)` → `(plant_id, plant_name, scope1_tco2e, scope2_tco2e)` per plant (LEFT JOIN, so plants with no approved data show 0) for the Emissions & projects view.
+
+**Scope 1 vs 2 derivation (resolved open question):** an approved `ec_submission_lines` row
+carries the snapshot factor code `snap_ef_id`, whose `EF-S1-`/`EF-S2-` prefix matches the
+authoritative `ec_emission_factors.scope` exactly (verified live: 30 `EF-S1-` = Scope 1, 18
+`EF-S2-` = Scope 2). The functions use the prefix on the snapshot — no join, no drop risk —
+kept server-side so the publish preview and the per-plant view always agree.
+
+EXECUTE hardening (migration 0017, mirrors 0013): the seven app functions are
+`REVOKE`d from `PUBLIC`/`anon` and `GRANT`ed to `authenticated`. The two trigger functions
+(`dr_set_updated_at`, `dr_assign_project_code`) are revoked from everyone (triggers fire
+regardless). Migration 0019 pinned `search_path` on both trigger functions (clears the
+`function_search_path_mutable` lint).
+
+## Seed (migration 0018)
+
+`dr_annual_inventory` seeded for 2023 (`base_year`), 2024, 2025 (`reported`). Scope 1/2 are
+aggregated from the platform's **live approved** location-based lines (same logic as
+`dr_publish_inventory`, so the seed equals what a re-publish would produce); Scope 3 is the
+plug that makes the total match the authoritative chart-spec actuals.
+
+| Year | scope1 | scope2 | scope3 (plug) | total | status |
+|------|-------:|-------:|--------------:|------:|--------|
+| 2023 | 70,080.06 | 130,580.00 | 489,339.94 | **690,000** | base_year |
+| 2024 | 69,377.57 | 129,274.20 | 484,348.23 | **683,000** | reported |
+| 2025 | 68,325.96 | 127,315.50 | 477,358.54 | **673,000** | reported |
+
+(Chart-spec baseline 690,000 = 2023 Scope 1+2+3; YoY actuals 683,000 / 673,000.)
+
+## Functional verification (session 2 — rolled-back transactions)
+
+- **State machine + comment trail:** plant_manager submits (`DC-001`, evaluation) → admin
+  advance (pending) → admin return with comment (restudy; one `dr_comments` row,
+  `from_status='pending'`, comment trimmed) → owner resubmit (evaluation) → admin advance →
+  admin approve (approved). Full cycle ✓.
+- **dr_projects read scoping:** with P1 (FAC-001), P2 (FAC-002), G1 (global) present —
+  plant_manager FAC-001 sees only P1; FAC-002 sees only P2; sourcing_manager sees only G1;
+  esg_admin sees all three ✓ (acceptance criterion 6).
+- **Guards (all raised as expected):** empty/blank return comment rejected; a manager
+  cannot change status by direct UPDATE (RLS); a manager cannot call `dr_advance_project`
+  (not authorized); a manager cannot insert for a plant they don't manage (RLS); a non-admin
+  cannot call the aggregation functions (not authorized).
+- **Aggregations:** `dr_plant_scope_totals(2025)` per-plant S1/S2 sums to 68,326.0 / 127,315.5
+  (matches the 2025 inventory) ✓.
+- No test rows persisted (all rolled back); `dr_project_code_seq` reset so the first real
+  project is `DC-001`.
+
+## Security advisor notes (Decarbonization Roadmap — accepted)
+
+`get_advisors(security)` after 0015–0019 reports, on this build's objects, only
+**`authenticated_security_definer_function_executable` (WARN ×7)** on the seven `dr_` app
+functions — **by design**, identical to the platform's accepted stance for its `ec_` RPCs
+(each self-authorizes with the `ec_private` helpers and must be callable by `authenticated`).
+The earlier `function_search_path_mutable` warnings on the two trigger functions were fixed
+in 0019. All other findings are pre-existing portal/platform items not owned by this build
+(`rls_policy_always_true` ×2, `rls_auto_enable`, the eight `ec_` RPC warnings, and the
+project-level `auth_leaked_password_protection` auth setting).
+
+---
+_Last updated: 15 June 2026 — session 2 (Decarbonization Roadmap DB **applied + verified**: ec_user_roles → user_roles rename + sourcing_manager role, invite-user redeployed, three dr_ tables + RLS, five workflow + two aggregation functions, 2023–2025 seed; migrations 0015–0019). Supplier Portal and Emissions Platform schemas above unchanged except the sanctioned rename._
