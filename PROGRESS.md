@@ -16,6 +16,7 @@
 - FE-4 admin approval: shared `ProjectDetail` component (used by manager + admin), `QueuePage` with status filters (Needs action / Approved / Restudy / All + counts), and advance / approve / return-with-required-comment via the workflow RPCs.
 - FE-5 annual inventory: `InventoryPage` publish panel — live approved Scope 1/2 via `dr_preview_inventory` (re-fetched on year change), Scope 3 entry, computed total, publish/re-publish via `dr_publish_inventory`; published-history table with statuses.
 - FE-6 roadmap charts (custom SVG): `chartScales` (scales/ticks/colours), `ChartFrame` + `LegendItem`, `WaterfallChart` (two-tone floating bars, hatched removals, step connectors), `TrajectoryChart` (committed/target lines, shaded decision-gap band, faint BAU, actuals overlay, net-zero marker), `SbtiBadge`, `useRoadmapData` hook, `RoadmapPage` with a summary stat strip. Lime budget respected (≤2/page: SBTi-OK badge + trajectory net-zero marker, both inside black).
+- FE-7 emissions & projects: `MacCurveChart` (Ink approved / Stone pending, zero-crossing axis), `EmissionsPage` — per-plant Scope 1/2 via `dr_plant_scope_totals` (year selector, default latest reported, all-plants total), the MAC curve, and the full project pipeline table with financials.
 
 **Phase 1 (live database layer) is complete, applied to "The Corporate Space", and verified.** Migrations 0015–0019:
 - `ec_user_roles` → `user_roles` (atomic), role check expanded with `sourcing_manager`, all six dependent objects recreated to reference the new name, `invite-user` Edge Function redeployed (v2, verify_jwt=true). Emissions Platform verification matrix re-run and **passes** (anon/no-role see nothing; esg_admin all; plant_manager own-plant only; sourcing_manager sees zero `ec_` data).
@@ -31,7 +32,6 @@ Session 2: applied + verified the whole DB layer (migrations 0015–0019); passe
 [Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] FE-7 Emissions & projects + MAC curve: per-plant S1/2 via `dr_plant_scope_totals` (year selector, default latest reported), full project list, MacCurveChart. *(AC 12)*
 - [ ] FE-8 Settings → Users: list + invite (insert `user_roles` row → invoke `invite-user` → `ec_link_pending_users()`). *(AC 13)*
 - [ ] FE-9 Local test pass + responsive polish (700px + mobile, lime budget, hairlines, square corners), then deploy.
 - [ ] Acceptance criteria pass — spec Section 13 (15 criteria) before deploy.
