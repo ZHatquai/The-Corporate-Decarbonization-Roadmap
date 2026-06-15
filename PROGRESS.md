@@ -2,12 +2,12 @@
 
 > Claude Code: read this file at the start of every session, before touching anything. Update it at every save point. Replace content — do not append. History lives in git.
 
-**Session:** 2 — DB layer + full frontend (FE-0 → FE-8) built and building clean; deploy is the last step
+**Session:** 2 — DB layer + full frontend (FE-0 → FE-9) built, **deployed, and working**; Emissions Platform rename-regression fixed
 **Last updated:** 15 June 2026 — session 2
-**Live URL:** none yet [Rule: fill in after the first successful deploy]
+**Live URL:** deployed and live on Netlify (URL to be recorded — paste it and it goes here)
 
 ## Current state
-**Phase 2 frontend: FE-0 → FE-8 done; `npm run build` ✓. Every role surface is built.**
+**Build complete and DEPLOYED. The Roadmap is live and working; every role surface is built; `npm run build` ✓.**
 - FE-0 scaffold: Vite + React (JS) + Tailwind v3 at repo root; brand tokens in `tailwind.config.js` + `src/index.css` (Chalk page / Linen surfaces / Ink text / Acid Lime reserved; Playfair + DM Sans; square corners; hairline borders). Brand primitives in `src/components/brand/` (Logo, Button, Card, Field, Input/Select/Textarea, Table, StatusBadge). `src/lib/supabaseClient.js` (anon key only). `.env.example` (no values).
 - FE-1 auth + routing: `AuthProvider`/`useAuth` (session via supabase auth + own-row select on `user_roles`), `Protected` route guard (login / access / wrong-role redirects), `HomeRedirect`, magic-link `Login`, `AccessNotProvisioned`, role-aware `AppShell` (admin vs manager nav), placeholder pages for all destinations, `react-router-dom` v6 route tree. Netlify SPA config (`public/_redirects`, `netlify.toml`).
 - Full auth/session behaviour verifies on the deployed site (outbound to supabase.co is blocked in the build env; no local anon key by design).
@@ -18,7 +18,8 @@
 - FE-6 roadmap charts (custom SVG): `chartScales` (scales/ticks/colours), `ChartFrame` + `LegendItem`, `WaterfallChart` (two-tone floating bars, hatched removals, step connectors), `TrajectoryChart` (committed/target lines, shaded decision-gap band, faint BAU, actuals overlay, net-zero marker), `SbtiBadge`, `useRoadmapData` hook, `RoadmapPage` with a summary stat strip. Lime budget respected (≤2/page: SBTi-OK badge + trajectory net-zero marker, both inside black).
 - FE-7 emissions & projects: `MacCurveChart` (Ink approved / Stone pending, zero-crossing axis), `EmissionsPage` — per-plant Scope 1/2 via `dr_plant_scope_totals` (year selector, default latest reported, all-plants total), the MAC curve, and the full project pipeline table with financials.
 - FE-8 users: `UsersPage` (Settings → Users) — invite form (email + role + plant for plant managers) that inserts the `user_roles` row, invokes the `invite-user` Edge Function, and backfills via `ec_link_pending_users()`; provisioned-users table with Active/Invited status.
-- FE-9 polish: responsive layouts (grids collapse to 1 col, tables + charts scroll on mobile, nav scrolls), square corners, hairline borders, Acid Lime kept to ≤2/page. Engine regression check still passes. **Live walkthrough + spec-Section-13 acceptance pass happen on the deployed site** (auth/REST need the live env).
+- FE-9 polish: responsive layouts (grids collapse to 1 col, tables + charts scroll on mobile, nav scrolls), square corners, hairline borders, Acid Lime kept to ≤2/page. Engine regression check still passes.
+- **Deployed to Netlify and confirmed working** (ESG-lead sign-in + role routing verified live by the builder). Supabase Auth Redirect URLs include the Roadmap domain.
 
 **Phase 1 (live database layer) is complete, applied to "The Corporate Space", and verified.** Migrations 0015–0019:
 - `ec_user_roles` → `user_roles` (atomic), role check expanded with `sourcing_manager`, all six dependent objects recreated to reference the new name, `invite-user` Edge Function redeployed (v2, verify_jwt=true). Emissions Platform verification matrix re-run and **passes** (anon/no-role see nothing; esg_admin all; plant_manager own-plant only; sourcing_manager sees zero `ec_` data).
@@ -29,12 +30,13 @@
 [Rule: this section describes what exists and works right now — never what is planned.]
 
 ## Last session
-Session 2: applied + verified the whole DB layer (migrations 0015–0019), passed the checkpoint, then built the entire frontend FE-0 → FE-8 (scaffold/brand, auth+routing, shared engine validated against the spec example, manager submit/status, admin approval queue, inventory publish, the two custom-SVG charts + MAC curve, emissions/pipeline, users/invite) plus FE-9 responsive polish. Build green throughout; pushed to PR #2. Only deploy + the live acceptance walkthrough remain.
+Session 2: applied + verified the whole DB layer (migrations 0015–0019), passed the checkpoint, built the entire frontend FE-0 → FE-9, seeded the 39-project demo pipeline (0020), and deployed to Netlify (working). Fixed a rename regression that broke the Emissions Platform with a `security_invoker` compat view `ec_user_roles` → `user_roles` (0021). All on PR #2.
 [Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] Deploy to Netlify — builder connects the repo and adds VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY in the Netlify dashboard (auto-deploys on merge to main). Also add the Netlify URL to Supabase Auth → URL Configuration → Redirect URLs (keep the Emissions Platform URL too).
-- [ ] Live acceptance walkthrough — spec Section 13 (15 criteria) on the deployed site: sign in each role, manager submit → admin advance/approve/return-with-comment → resubmit, publish inventory, invite a user, confirm the charts/MAC render.
+- [ ] Merge PR #2 into `main` (if not already) so `main` is the source of truth for future auto-deploys.
+- [ ] Live acceptance walkthrough — spec Section 13 (15 criteria): manager submit → admin advance/approve/return-with-comment → resubmit, publish inventory, invite a user, confirm charts/MAC render (ESG-lead sign-in + routing already confirmed).
+- [ ] Emissions Platform unification (its own repo — not this session): swap `ec_user_roles` → `user_roles`, redeploy, then `DROP VIEW public.ec_user_roles;`. See `docs/emissions-platform-unification-handoff.md`.
 [Rule: completed items leave this list and are absorbed into Current state. This list only shrinks.]
 
 ## Build decisions
