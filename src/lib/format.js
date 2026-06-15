@@ -51,7 +51,7 @@ export function formatMac(v) {
 }
 
 export function formatPercent(v, digits = 1) {
-  return `${nf1.format((Number(v) || 0) * 100)}%`.replace(/\.0%$/, digits === 0 ? '%' : '.0%')
+  return `${((Number(v) || 0) * 100).toFixed(digits)}%`
 }
 
 // Date as "DD Month YYYY" (brand Section 8: no ordinals).
