@@ -512,5 +512,16 @@ in 0019. All other findings are pre-existing portal/platform items not owned by 
 (`rls_policy_always_true` ×2, `rls_auto_enable`, the eight `ec_` RPC warnings, and the
 project-level `auth_leaked_password_protection` auth setting).
 
+## Demo project pipeline (migration 0020 — builder-provided, removable)
+
+`dr_projects` seeded with 39 demo projects across the 5 plants + global (codes
+`DC-001`–`DC-039`): 14 approved, 19 pending, 3 evaluation, 3 restudy (one removal —
+DAC, `DC-039`). Three restudy projects carry a seeded `dr_comments` return note
+(author NULL). Designed to reconcile the roadmap: approved+pending non-removal
+reductions 740,200, removals 73,075, grown carbon debt ≈ 813,280 → **net ≈ 5 tCO2e
+(Net-Zero), removals 8.99% (within the 10% SBTi cap)**. The `dr_project_code_seq`
+was advanced to 39 so live submissions continue at `DC-040`. Remove with:
+`DELETE FROM public.dr_projects WHERE submitted_by IS NULL AND project_code BETWEEN 'DC-001' AND 'DC-039';`
+
 ---
-_Last updated: 15 June 2026 — session 2 (Decarbonization Roadmap DB **applied + verified**: ec_user_roles → user_roles rename + sourcing_manager role, invite-user redeployed, three dr_ tables + RLS, five workflow + two aggregation functions, 2023–2025 seed; migrations 0015–0019). Supplier Portal and Emissions Platform schemas above unchanged except the sanctioned rename._
+_Last updated: 15 June 2026 — session 2 (Decarbonization Roadmap DB **applied + verified**: ec_user_roles → user_roles rename + sourcing_manager role, invite-user redeployed, three dr_ tables + RLS, five workflow + two aggregation functions, 2023–2025 inventory seed, and a removable 39-row demo project pipeline; migrations 0015–0020). Supplier Portal and Emissions Platform schemas above unchanged except the sanctioned rename._

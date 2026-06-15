@@ -33,9 +33,8 @@ Session 2: applied + verified the whole DB layer (migrations 0015–0019), passe
 [Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] Deploy to Netlify — builder connects the repo and adds VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY in the Netlify dashboard (auto-deploys on merge to main).
+- [ ] Deploy to Netlify — builder connects the repo and adds VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY in the Netlify dashboard (auto-deploys on merge to main). Also add the Netlify URL to Supabase Auth → URL Configuration → Redirect URLs (keep the Emissions Platform URL too).
 - [ ] Live acceptance walkthrough — spec Section 13 (15 criteria) on the deployed site: sign in each role, manager submit → admin advance/approve/return-with-comment → resubmit, publish inventory, invite a user, confirm the charts/MAC render.
-- [ ] (Optional) Seed a demo project set so the Roadmap charts / MAC / pipeline show data before real submissions (declined by the prod-write guard this session — needs explicit go-ahead).
 [Rule: completed items leave this list and are absorbed into Current state. This list only shrinks.]
 
 ## Build decisions
@@ -54,7 +53,7 @@ Session 2: applied + verified the whole DB layer (migrations 0015–0019), passe
 - Trajectory parameters (growth 0.0075, target 2045, SBTi cap 0.10, threshold 1000) are fixed config this build; confirm they stay non-editable (spec Open Question).
 - Per-plant emissions view: default to latest reported year with a year selector; confirm granularity during FE-7 (spec Open Question).
 - Live data: real 2023–2025 emissions are loaded (migration `load_real_2023_2025_data`), so per-plant figures and the inventory preview reflect real data for those years. The Emissions Platform demo dataset (0012) is still present for 2026 — harmless to this tool (it aggregates by `year`), remove upstream when desired.
-- `dr_projects` is empty (test inserts were rolled back; the demo seed was declined by the prod-write guard), so the Roadmap charts show baseline→growth→net, the MAC curve shows an empty note, and the pipeline is empty until projects are submitted/approved or a demo set is seeded. Empty states are handled gracefully.
+- `dr_projects` seeded with 39 builder-provided demo projects (migration 0020, removable): roadmap reconciles to net ≈ 5 tCO2e (Net-Zero), removals 8.99%; codes DC-001–039, sequence advanced so live submissions start at DC-040. Charts / MAC / pipeline populate on first view.
 - Supabase Free plan pauses after ~1 week idle; wake the project in the dashboard if REST calls 5xx after a quiet period.
 - `npm audit`: 2 high-severity findings in esbuild (transitive via Vite 5) — the dev-server-only advisory (GHSA-67mh-4wv8-2f99). Does not affect the static production bundle; fix requires a Vite v8 major bump. Deferred.
 [Rule: bugs, edge cases, deferred fixes. One line each. Remove when resolved.]
