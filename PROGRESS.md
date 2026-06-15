@@ -7,13 +7,14 @@
 **Live URL:** none yet [Rule: fill in after the first successful deploy]
 
 ## Current state
-**Phase 2 frontend: FE-0 + FE-1 done; `npm run build` ✓.**
+**Phase 2 frontend: FE-0 → FE-5 done; `npm run build` ✓.**
 - FE-0 scaffold: Vite + React (JS) + Tailwind v3 at repo root; brand tokens in `tailwind.config.js` + `src/index.css` (Chalk page / Linen surfaces / Ink text / Acid Lime reserved; Playfair + DM Sans; square corners; hairline borders). Brand primitives in `src/components/brand/` (Logo, Button, Card, Field, Input/Select/Textarea, Table, StatusBadge). `src/lib/supabaseClient.js` (anon key only). `.env.example` (no values).
 - FE-1 auth + routing: `AuthProvider`/`useAuth` (session via supabase auth + own-row select on `user_roles`), `Protected` route guard (login / access / wrong-role redirects), `HomeRedirect`, magic-link `Login`, `AccessNotProvisioned`, role-aware `AppShell` (admin vs manager nav), placeholder pages for all destinations, `react-router-dom` v6 route tree. Netlify SPA config (`public/_redirects`, `netlify.toml`).
 - Full auth/session behaviour verifies on the deployed site (outbound to supabase.co is blocked in the build env; no local anon key by design).
 - FE-2 shared engine: `src/lib/config.js` (fixed config), `trajectoryEngine.js` (`computeWaterfall` + `computeTrajectory` + `computeRoadmap`), `macCurve.js`, `format.js`. Validated against the spec example via `node scripts/validate-engine.mjs` — ALL CHECKS PASS (carbon_debt ≈ 813,280; net ≈ −20 / Net-Zero; removals 9.01% within cap; lines start at baseline; target ≈ 0 at 2045; committed 563,280 > 0; evaluation/restudy excluded; MAC ascending).
 - FE-3 manager surface: `src/data/api.js` (single query/RPC surface), `projectFields.js`, `ProjectForm` (plant fixed from role; full validation), `SubmitPage` (creates a project in evaluation; plant_id from role / NULL for sourcing), `StatusPage` (own projects table + detail panel + `CommentTrail` + resubmit via `dr_resubmit_project`). Behaviour verifies live on deploy.
 - FE-4 admin approval: shared `ProjectDetail` component (used by manager + admin), `QueuePage` with status filters (Needs action / Approved / Restudy / All + counts), and advance / approve / return-with-required-comment via the workflow RPCs.
+- FE-5 annual inventory: `InventoryPage` publish panel — live approved Scope 1/2 via `dr_preview_inventory` (re-fetched on year change), Scope 3 entry, computed total, publish/re-publish via `dr_publish_inventory`; published-history table with statuses.
 
 **Phase 1 (live database layer) is complete, applied to "The Corporate Space", and verified.** Migrations 0015–0019:
 - `ec_user_roles` → `user_roles` (atomic), role check expanded with `sourcing_manager`, all six dependent objects recreated to reference the new name, `invite-user` Edge Function redeployed (v2, verify_jwt=true). Emissions Platform verification matrix re-run and **passes** (anon/no-role see nothing; esg_admin all; plant_manager own-plant only; sourcing_manager sees zero `ec_` data).
@@ -29,7 +30,6 @@ Session 2: applied + verified the whole DB layer (migrations 0015–0019); passe
 [Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] FE-5 Annual inventory: PublishPanel (live S1/S2 via `dr_preview_inventory`, S3 entry, total, publish/re-publish). *(AC 8)*
 - [ ] FE-6 Roadmap charts (custom SVG): WaterfallChart, TrajectoryChart, SbtiBadge, fed by `useRoadmapData`. *(AC 9, 10, 11)*
 - [ ] FE-7 Emissions & projects + MAC curve: per-plant S1/2 via `dr_plant_scope_totals` (year selector, default latest reported), full project list, MacCurveChart. *(AC 12)*
 - [ ] FE-8 Settings → Users: list + invite (insert `user_roles` row → invoke `invite-user` → `ec_link_pending_users()`). *(AC 13)*
