@@ -11,6 +11,7 @@
 - FE-0 scaffold: Vite + React (JS) + Tailwind v3 at repo root; brand tokens in `tailwind.config.js` + `src/index.css` (Chalk page / Linen surfaces / Ink text / Acid Lime reserved; Playfair + DM Sans; square corners; hairline borders). Brand primitives in `src/components/brand/` (Logo, Button, Card, Field, Input/Select/Textarea, Table, StatusBadge). `src/lib/supabaseClient.js` (anon key only). `.env.example` (no values).
 - FE-1 auth + routing: `AuthProvider`/`useAuth` (session via supabase auth + own-row select on `user_roles`), `Protected` route guard (login / access / wrong-role redirects), `HomeRedirect`, magic-link `Login`, `AccessNotProvisioned`, role-aware `AppShell` (admin vs manager nav), placeholder pages for all destinations, `react-router-dom` v6 route tree. Netlify SPA config (`public/_redirects`, `netlify.toml`).
 - Full auth/session behaviour verifies on the deployed site (outbound to supabase.co is blocked in the build env; no local anon key by design).
+- FE-2 shared engine: `src/lib/config.js` (fixed config), `trajectoryEngine.js` (`computeWaterfall` + `computeTrajectory` + `computeRoadmap`), `macCurve.js`, `format.js`. Validated against the spec example via `node scripts/validate-engine.mjs` — ALL CHECKS PASS (carbon_debt ≈ 813,280; net ≈ −20 / Net-Zero; removals 9.01% within cap; lines start at baseline; target ≈ 0 at 2045; committed 563,280 > 0; evaluation/restudy excluded; MAC ascending).
 
 **Phase 1 (live database layer) is complete, applied to "The Corporate Space", and verified.** Migrations 0015–0019:
 - `ec_user_roles` → `user_roles` (atomic), role check expanded with `sourcing_manager`, all six dependent objects recreated to reference the new name, `invite-user` Edge Function redeployed (v2, verify_jwt=true). Emissions Platform verification matrix re-run and **passes** (anon/no-role see nothing; esg_admin all; plant_manager own-plant only; sourcing_manager sees zero `ec_` data).
@@ -26,7 +27,6 @@ Session 2: applied + verified the whole DB layer (migrations 0015–0019; rename
 [Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] FE-2 Shared pure engine: config, `trajectoryEngine.js` (waterfall decomposition + per-year sweep), `macCurve.js`, `format.js`; validate vs spec example (carbon_debt ≈ 813,300; net ≈ 0; removals ≈ 9.0%).
 - [ ] FE-3 Manager surface: ProjectForm (plant-fixed vs global), SubmissionForm, StatusList, CommentTrail, resubmit. *(AC 4, 5, partial 7)*
 - [ ] FE-4 Admin approval: AppShell + AdminNav, ApprovalQueue, ProjectDetail, advance/approve/return RPCs (comment required). *(AC 7)*
 - [ ] FE-5 Annual inventory: PublishPanel (live S1/S2 via `dr_preview_inventory`, S3 entry, total, publish/re-publish). *(AC 8)*
