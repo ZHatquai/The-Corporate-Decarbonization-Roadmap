@@ -523,5 +523,29 @@ reductions 740,200, removals 73,075, grown carbon debt ≈ 813,280 → **net ≈
 was advanced to 39 so live submissions continue at `DC-040`. Remove with:
 `DELETE FROM public.dr_projects WHERE submitted_by IS NULL AND project_code BETWEEN 'DC-001' AND 'DC-039';`
 
+## Backward-compatibility view `ec_user_roles` (migration 0021)
+
+The rename in 0015 broke the **Emissions Platform** frontend, whose deployed bundle
+still queries the pre-rename name `ec_user_roles` by REST (own-row role lookup) — its
+sign-in showed "Access not provisioned" even for valid roles. Migration 0021 restores
+that name as a view (the "expand" half of an expand→migrate→contract rename):
+
+```sql
+CREATE VIEW public.ec_user_roles WITH (security_invoker = true) AS
+  SELECT email, user_id, role, plant_id, created_at FROM public.user_roles;
+GRANT SELECT ON public.ec_user_roles TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.ec_user_roles TO authenticated;
+```
+
+`security_invoker = true` means the underlying `user_roles` RLS is enforced with the
+caller's identity, so the view exposes nothing new (verified: esg_admin → all rows,
+plant_manager → own row only, anon → 0). The view is auto-updatable, so the platform's
+invite insert/update still flows through to `user_roles` under RLS. `get_advisors(security)`
+reports no new lint (no `security_definer_view` because invoker mode is set).
+
+This is a **bridge**: when the Emissions Platform is migrated to query `user_roles`
+directly and redeployed, drop the view (`DROP VIEW public.ec_user_roles;`) to finish the
+rename. The Roadmap already uses `user_roles` directly and does not need it.
+
 ---
-_Last updated: 15 June 2026 — session 2 (Decarbonization Roadmap DB **applied + verified**: ec_user_roles → user_roles rename + sourcing_manager role, invite-user redeployed, three dr_ tables + RLS, five workflow + two aggregation functions, 2023–2025 inventory seed, and a removable 39-row demo project pipeline; migrations 0015–0020). Supplier Portal and Emissions Platform schemas above unchanged except the sanctioned rename._
+_Last updated: 15 June 2026 — session 2 (Decarbonization Roadmap DB **applied + verified**: ec_user_roles → user_roles rename + sourcing_manager role, invite-user redeployed, three dr_ tables + RLS, five workflow + two aggregation functions, 2023–2025 inventory seed, a removable 39-row demo project pipeline, and the ec_user_roles compatibility view for the Emissions Platform; migrations 0015–0021). Supplier Portal and Emissions Platform schemas above unchanged except the sanctioned rename._
