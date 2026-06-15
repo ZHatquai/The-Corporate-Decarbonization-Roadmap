@@ -1,0 +1,12 @@
+# Netlify build settings. The builder connects the repo and enters the two
+# VITE_ environment variables (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) in the
+# Netlify dashboard before the first deploy. SPA fallback also lives in
+# public/_redirects (copied to dist).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
