@@ -2,12 +2,12 @@
 
 > Claude Code: read this file at the start of every session, before touching anything. Update it at every save point. Replace content — do not append. History lives in git.
 
-**Session:** 2 — DB layer done; frontend through FE-3 (scaffold, auth/routing, engine, manager surface) — all build clean
+**Session:** 2 — DB layer + full frontend (FE-0 → FE-8) built and building clean; deploy is the last step
 **Last updated:** 15 June 2026 — session 2
 **Live URL:** none yet [Rule: fill in after the first successful deploy]
 
 ## Current state
-**Phase 2 frontend: FE-0 → FE-5 done; `npm run build` ✓.**
+**Phase 2 frontend: FE-0 → FE-8 done; `npm run build` ✓. Every role surface is built.**
 - FE-0 scaffold: Vite + React (JS) + Tailwind v3 at repo root; brand tokens in `tailwind.config.js` + `src/index.css` (Chalk page / Linen surfaces / Ink text / Acid Lime reserved; Playfair + DM Sans; square corners; hairline borders). Brand primitives in `src/components/brand/` (Logo, Button, Card, Field, Input/Select/Textarea, Table, StatusBadge). `src/lib/supabaseClient.js` (anon key only). `.env.example` (no values).
 - FE-1 auth + routing: `AuthProvider`/`useAuth` (session via supabase auth + own-row select on `user_roles`), `Protected` route guard (login / access / wrong-role redirects), `HomeRedirect`, magic-link `Login`, `AccessNotProvisioned`, role-aware `AppShell` (admin vs manager nav), placeholder pages for all destinations, `react-router-dom` v6 route tree. Netlify SPA config (`public/_redirects`, `netlify.toml`).
 - Full auth/session behaviour verifies on the deployed site (outbound to supabase.co is blocked in the build env; no local anon key by design).
@@ -17,25 +17,25 @@
 - FE-5 annual inventory: `InventoryPage` publish panel — live approved Scope 1/2 via `dr_preview_inventory` (re-fetched on year change), Scope 3 entry, computed total, publish/re-publish via `dr_publish_inventory`; published-history table with statuses.
 - FE-6 roadmap charts (custom SVG): `chartScales` (scales/ticks/colours), `ChartFrame` + `LegendItem`, `WaterfallChart` (two-tone floating bars, hatched removals, step connectors), `TrajectoryChart` (committed/target lines, shaded decision-gap band, faint BAU, actuals overlay, net-zero marker), `SbtiBadge`, `useRoadmapData` hook, `RoadmapPage` with a summary stat strip. Lime budget respected (≤2/page: SBTi-OK badge + trajectory net-zero marker, both inside black).
 - FE-7 emissions & projects: `MacCurveChart` (Ink approved / Stone pending, zero-crossing axis), `EmissionsPage` — per-plant Scope 1/2 via `dr_plant_scope_totals` (year selector, default latest reported, all-plants total), the MAC curve, and the full project pipeline table with financials.
+- FE-8 users: `UsersPage` (Settings → Users) — invite form (email + role + plant for plant managers) that inserts the `user_roles` row, invokes the `invite-user` Edge Function, and backfills via `ec_link_pending_users()`; provisioned-users table with Active/Invited status.
+- FE-9 polish: responsive layouts (grids collapse to 1 col, tables + charts scroll on mobile, nav scrolls), square corners, hairline borders, Acid Lime kept to ≤2/page. Engine regression check still passes. **Live walkthrough + spec-Section-13 acceptance pass happen on the deployed site** (auth/REST need the live env).
 
 **Phase 1 (live database layer) is complete, applied to "The Corporate Space", and verified.** Migrations 0015–0019:
 - `ec_user_roles` → `user_roles` (atomic), role check expanded with `sourcing_manager`, all six dependent objects recreated to reference the new name, `invite-user` Edge Function redeployed (v2, verify_jwt=true). Emissions Platform verification matrix re-run and **passes** (anon/no-role see nothing; esg_admin all; plant_manager own-plant only; sourcing_manager sees zero `ec_` data).
 - Three `dr_` tables created with explicit RLS (reusing `ec_private` helpers + sourcing_manager handling): `dr_projects` (sequence + `DC-###` code trigger + updated_at trigger), `dr_annual_inventory` (esg_admin only), `dr_comments` (immutable, read-scoped, insert via function only).
 - Five workflow functions (advance/approve/return/resubmit/publish) + two read-only aggregation functions (preview, per-plant totals), all SECURITY DEFINER + self-authorizing, EXECUTE hardened to authenticated.
 - `dr_annual_inventory` seeded 2023 (base_year, 690,000) / 2024 (683,000) / 2025 (673,000) — real live S1/S2 + plug S3.
-- Full functional + RLS + negative-test pass in rolled-back transactions; `get_advisors(security)` clean (only the by-design SECURITY-DEFINER-RPC warnings remain). `docs/supabase-setup.md` updated as the schema source of truth.
-- No app code yet. The Scope 1/2 open question is resolved (see Build decisions).
+- Full functional + RLS + negative-test pass in rolled-back transactions; `get_advisors(security)` clean (only the by-design SECURITY-DEFINER-RPC warnings remain). `docs/supabase-setup.md` updated as the schema source of truth. The Scope 1/2 open question is resolved (see Build decisions).
 [Rule: this section describes what exists and works right now — never what is planned.]
 
 ## Last session
-Session 2: applied + verified the whole DB layer (migrations 0015–0019); passed the checkpoint; then built the frontend through FE-3 — FE-0 scaffold + brand primitives, FE-1 auth/role-gate/routing, FE-2 shared engine (validated against the spec example), FE-3 manager surface (submission form + status list + comment trail + resubmit). Build green at every step.
+Session 2: applied + verified the whole DB layer (migrations 0015–0019), passed the checkpoint, then built the entire frontend FE-0 → FE-8 (scaffold/brand, auth+routing, shared engine validated against the spec example, manager submit/status, admin approval queue, inventory publish, the two custom-SVG charts + MAC curve, emissions/pipeline, users/invite) plus FE-9 responsive polish. Build green throughout; pushed to PR #2. Only deploy + the live acceptance walkthrough remain.
 [Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] FE-8 Settings → Users: list + invite (insert `user_roles` row → invoke `invite-user` → `ec_link_pending_users()`). *(AC 13)*
-- [ ] FE-9 Local test pass + responsive polish (700px + mobile, lime budget, hairlines, square corners), then deploy.
-- [ ] Acceptance criteria pass — spec Section 13 (15 criteria) before deploy.
-- [ ] Deploy to Netlify — builder adds VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Netlify dashboard.
+- [ ] Deploy to Netlify — builder connects the repo and adds VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY in the Netlify dashboard (auto-deploys on merge to main).
+- [ ] Live acceptance walkthrough — spec Section 13 (15 criteria) on the deployed site: sign in each role, manager submit → admin advance/approve/return-with-comment → resubmit, publish inventory, invite a user, confirm the charts/MAC render.
+- [ ] (Optional) Seed a demo project set so the Roadmap charts / MAC / pipeline show data before real submissions (declined by the prod-write guard this session — needs explicit go-ahead).
 [Rule: completed items leave this list and are absorbed into Current state. This list only shrinks.]
 
 ## Build decisions
@@ -54,6 +54,7 @@ Session 2: applied + verified the whole DB layer (migrations 0015–0019); passe
 - Trajectory parameters (growth 0.0075, target 2045, SBTi cap 0.10, threshold 1000) are fixed config this build; confirm they stay non-editable (spec Open Question).
 - Per-plant emissions view: default to latest reported year with a year selector; confirm granularity during FE-7 (spec Open Question).
 - Live data: real 2023–2025 emissions are loaded (migration `load_real_2023_2025_data`), so per-plant figures and the inventory preview reflect real data for those years. The Emissions Platform demo dataset (0012) is still present for 2026 — harmless to this tool (it aggregates by `year`), remove upstream when desired.
+- `dr_projects` is empty (test inserts were rolled back; the demo seed was declined by the prod-write guard), so the Roadmap charts show baseline→growth→net, the MAC curve shows an empty note, and the pipeline is empty until projects are submitted/approved or a demo set is seeded. Empty states are handled gracefully.
 - Supabase Free plan pauses after ~1 week idle; wake the project in the dashboard if REST calls 5xx after a quiet period.
 - `npm audit`: 2 high-severity findings in esbuild (transitive via Vite 5) — the dev-server-only advisory (GHSA-67mh-4wv8-2f99). Does not affect the static production bundle; fix requires a Vite v8 major bump. Deferred.
 [Rule: bugs, edge cases, deferred fixes. One line each. Remove when resolved.]

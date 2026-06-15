@@ -84,12 +84,24 @@ export default function TrajectoryChart({ trajectory, config }) {
         Target
       </text>
 
-      {/* net-zero marker: lime dot inside a black square (a permitted lime use) */}
-      <rect x={nzX - 5} y={nzY - 5} width="10" height="10" fill={C.ink} />
-      <circle cx={nzX} cy={nzY} r="2.6" fill={C.lime} />
-      <text x={nzX + 8} y={nzY + 14} fontSize="10" fontWeight="500" fill={C.ink} fontFamily="DM Sans, sans-serif">
-        Net-Zero {target}
-      </text>
+      {/* endpoint marker. Net-zero = lime dot inside a black square (a permitted lime
+          use); otherwise a neutral Ink dot with the residual value (no false claim). */}
+      {trajectory.endsNetZero ? (
+        <>
+          <rect x={nzX - 5} y={nzY - 5} width="10" height="10" fill={C.ink} />
+          <circle cx={nzX} cy={nzY} r="2.6" fill={C.lime} />
+          <text x={nzX + 8} y={nzY + 14} fontSize="10" fontWeight="500" fill={C.ink} fontFamily="DM Sans, sans-serif">
+            Net-Zero {target}
+          </text>
+        </>
+      ) : (
+        <>
+          <circle cx={nzX} cy={nzY} r="3" fill={C.ink} />
+          <text x={nzX + 8} y={nzY + 14} fontSize="10" fontWeight="500" fill={C.ink} fontFamily="DM Sans, sans-serif">
+            {formatK(last.target)} · {target}
+          </text>
+        </>
+      )}
 
       {/* axes */}
       <line x1={M.left} y1={yRaw(0)} x2={M.left + plotW} y2={yRaw(0)} stroke={C.ink} strokeWidth="0.75" />

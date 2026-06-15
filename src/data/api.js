@@ -97,3 +97,33 @@ export async function plantScopeTotals(year) {
   if (error) throw error
   return data ?? []
 }
+
+// ---- Users / invites (esg_admin) ----------------------------------------------
+export async function listUsers() {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('email, role, plant_id, user_id')
+    .order('email')
+  if (error) throw error
+  return data ?? []
+}
+
+// Authorization row first (RLS admin-insert), then the auth invite email, then a
+// backfill link in case the invitee already had an account.
+export async function inviteUser({ email, role, plant_id }) {
+  const clean = email.trim().toLowerCase()
+  const { error: insErr } = await supabase
+    .from('user_roles')
+    .insert({ email: clean, role, plant_id: plant_id ?? null })
+  if (insErr) throw insErr
+
+  const { data, error: fnErr } = await supabase.functions.invoke('invite-user', {
+    body: { email: clean, redirectTo: `${window.location.origin}/` },
+  })
+  if (fnErr) throw fnErr
+
+  // Best-effort: link a pre-existing auth account to the new role row.
+  await supabase.rpc('ec_link_pending_users').catch(() => {})
+
+  return data
+}
