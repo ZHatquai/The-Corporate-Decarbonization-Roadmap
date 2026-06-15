@@ -53,3 +53,11 @@ export function formatMac(v) {
 export function formatPercent(v, digits = 1) {
   return `${nf1.format((Number(v) || 0) * 100)}%`.replace(/\.0%$/, digits === 0 ? '%' : '.0%')
 }
+
+// Date as "DD Month YYYY" (brand Section 8: no ordinals).
+const df = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+export function formatDate(value) {
+  if (!value) return '—'
+  const d = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(d.getTime()) ? '—' : df.format(d)
+}
