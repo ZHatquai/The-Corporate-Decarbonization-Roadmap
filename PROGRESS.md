@@ -2,11 +2,13 @@
 
 > Claude Code: read this file at the start of every session, before touching anything. Update it at every save point. Replace content — do not append. History lives in git.
 
-**Session:** 2 — Database layer applied + verified; **at the Phase 1 checkpoint** (frontend next, on go-ahead)
+**Session:** 2 — DB layer done; frontend started (FE-0 scaffold builds)
 **Last updated:** 15 June 2026 — session 2
 **Live URL:** none yet [Rule: fill in after the first successful deploy]
 
 ## Current state
+**Phase 2 frontend started — FE-0 scaffold is in and builds clean** (`npm run build` ✓). Vite + React (JS) + Tailwind v3 at the repo root; brand tokens wired into `tailwind.config.js` + `src/index.css` (Chalk page / Linen surfaces / Ink text / Acid Lime reserved; Playfair + DM Sans; square corners; hairline borders). Brand primitives in `src/components/brand/` (Logo, Button, Card, Field, Input/Select/Textarea, Table, StatusBadge) with a barrel export. `src/lib/supabaseClient.js` uses the anon key only. `.env.example` carries no values. Temporary `App.jsx` smoke-tests the primitives (replaced in FE-1).
+
 **Phase 1 (live database layer) is complete, applied to "The Corporate Space", and verified.** Migrations 0015–0019:
 - `ec_user_roles` → `user_roles` (atomic), role check expanded with `sourcing_manager`, all six dependent objects recreated to reference the new name, `invite-user` Edge Function redeployed (v2, verify_jwt=true). Emissions Platform verification matrix re-run and **passes** (anon/no-role see nothing; esg_admin all; plant_manager own-plant only; sourcing_manager sees zero `ec_` data).
 - Three `dr_` tables created with explicit RLS (reusing `ec_private` helpers + sourcing_manager handling): `dr_projects` (sequence + `DC-###` code trigger + updated_at trigger), `dr_annual_inventory` (esg_admin only), `dr_comments` (immutable, read-scoped, insert via function only).
@@ -21,8 +23,6 @@ Session 2: ran Phase 1 end-to-end via Supabase MCP — introspected the live sch
 [Rule: 3–5 lines maximum. Replace each session.]
 
 ## Remaining work
-- [ ] **CHECKPOINT:** builder go-ahead to start the frontend (Phase 2 of docs/build-plan.md).
-- [ ] FE-0 Scaffold (Vite + React + Tailwind, react-router-dom v6, @supabase/supabase-js) + brand primitives + `lib/supabaseClient.js`; brand tokens into index.css/tailwind.config.js; `.env.example` (no values).
 - [ ] FE-1 Auth + role gate + routing: `useSession`, `useRole` (own-row select on `user_roles`), Login (magic link), AccessNotProvisioned, role redirects. *(AC 3)*
 - [ ] FE-2 Shared pure engine: config, `trajectoryEngine.js` (waterfall decomposition + per-year sweep), `macCurve.js`, `format.js`; validate vs spec example (carbon_debt ≈ 813,300; net ≈ 0; removals ≈ 9.0%).
 - [ ] FE-3 Manager surface: ProjectForm (plant-fixed vs global), SubmissionForm, StatusList, CommentTrail, resubmit. *(AC 4, 5, partial 7)*
@@ -53,6 +53,7 @@ Session 2: ran Phase 1 end-to-end via Supabase MCP — introspected the live sch
 - Per-plant emissions view: default to latest reported year with a year selector; confirm granularity during FE-7 (spec Open Question).
 - Live data: real 2023–2025 emissions are loaded (migration `load_real_2023_2025_data`), so per-plant figures and the inventory preview reflect real data for those years. The Emissions Platform demo dataset (0012) is still present for 2026 — harmless to this tool (it aggregates by `year`), remove upstream when desired.
 - Supabase Free plan pauses after ~1 week idle; wake the project in the dashboard if REST calls 5xx after a quiet period.
+- `npm audit`: 2 high-severity findings in esbuild (transitive via Vite 5) — the dev-server-only advisory (GHSA-67mh-4wv8-2f99). Does not affect the static production bundle; fix requires a Vite v8 major bump. Deferred.
 [Rule: bugs, edge cases, deferred fixes. One line each. Remove when resolved.]
 
 ## Notes for next session
