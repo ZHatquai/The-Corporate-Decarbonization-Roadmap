@@ -2,20 +2,19 @@
 
 > Claude Code: read this file at the start of every session, before touching anything. Update it at every save point. Replace content — do not append. History lives in git.
 
-**Session:** 0 — build not started
-**Last updated:** 15 June 2026 — by Project Governor, pre-build
+**Session:** 1 — First Session Setup complete; database layer next
+**Last updated:** 15 June 2026 — session 1
 **Live URL:** none yet [Rule: fill in after the first successful deploy]
 
 ## Current state
-Nothing built. Repo created and connected to Netlify by the builder; it contains CLAUDE.md, PROGRESS.md, product-spec.md, supabase-setup.md, waterfall-chart-spec.md, yoy-trajectory-chart-spec.md, and the the-corporate-brand brand skill (installed in session 1).
+First Session Setup done. Repo layout reorganized: the four reference docs now live in `docs/` (product-spec.md, supabase-setup.md, waterfall-chart-spec.md, yoy-trajectory-chart-spec.md); the the-corporate-brand skill is installed at `.claude/skills/the-corporate-brand/SKILL.md`; `.gitignore` added. CLAUDE.md and PROGRESS.md remain in the root. No app code or database changes yet — the build runs DB-first, then a checkpoint before the frontend.
 [Rule: this section describes what exists and works right now — never what is planned. Completed checklist items get absorbed here in compressed form.]
 
 ## Last session
-None — the first build session has not happened yet.
+Session 1: ran First Session Setup (created docs/, moved the four reference docs via git mv, installed the brand skill as SKILL.md, added .gitignore). Confirmed the build approach with the builder and wrote the approved build plan. Next: Phase 1 — the live database layer, ending at a checkpoint.
 [Rule: 3–5 lines maximum. Replace each session — what was built, changed, or fixed.]
 
 ## Remaining work
-- [ ] First Session Setup: create docs/, move product-spec.md, supabase-setup.md, and the two chart specs into it, install the the-corporate-brand skill, commit (see CLAUDE.md Session Protocol)
 - [ ] Connect to Supabase project "The Corporate Space", read docs/supabase-setup.md, and review the live schema via MCP before any database work
 - [ ] FIRST migration (atomic, before any dr_ table): rename ec_user_roles → user_roles, recreate the dependent helpers/trigger/backfill, expand the role constraint to add 'sourcing_manager', redeploy invite-user, then re-run the Emissions Platform verification matrix — do not proceed until it passes
 - [ ] Create dr_projects, dr_annual_inventory, dr_comments with explicit RLS policies (reuse the ec_private helpers; add sourcing_manager handling)
@@ -38,7 +37,11 @@ None — the first build session has not happened yet.
 [Rule: completed items leave this list and are absorbed into Current state. This list only shrinks.]
 
 ## Build decisions
-None yet.
+- Branch & deploy: develop on `claude/sleepy-lamport-hswsyc`, commit/push there each save point, and open a PR to `main` (merge → Netlify deploy). Deliberate deviation from CLAUDE.md's "push to main", agreed with the builder.
+- Charts: custom inline SVG (no charting library), fed by one shared engine — chosen for the bespoke two-tone bars, step connectors, and shaded decision-gap band.
+- Frontend stack picks: Vite + React (JS), `react-router-dom` v6 for role routing, `@supabase/supabase-js`.
+- Role resolution in the browser uses an own-row `select` on `user_roles` (the `ec_private.*` helpers are a private schema, not REST-exposed).
+- Execution sequencing: DB layer first, then a checkpoint for builder go-ahead before the frontend.
 [Rule: one line per decision made during the build that is not in the spec — prompt structures, field formats, naming choices, library picks. Future sessions depend on these to stay consistent.]
 
 ## Known issues
@@ -51,5 +54,7 @@ None yet.
 [Rule: bugs, edge cases, and deferred fixes. One line each. Remove when resolved.]
 
 ## Notes for next session
-None.
+- Supabase access: the `mcp__Supabase__*` tool calls were blocked by an approval gate in session 1, so the database layer could not start. The builder is opening a fresh session to allow those tools. In the new session, set `mcp__Supabase__*` to "Always allow" before starting Phase 1.
+- Resume point: **Phase 1 — Database layer**, following `docs/build-plan.md` (the full approved plan). Phase 0 (First Session Setup) is done and committed. Run Phase 1 end-to-end, then STOP at the checkpoint (1j) for builder go-ahead before any frontend work.
+- Branch/deploy reminder: commit/push to `claude/sleepy-lamport-hswsyc` and open a PR to `main` (do not push directly to main).
 [Rule: the builder writes here between sessions. Claude Code reads these aloud at session start, acts on them, then clears this section.]
